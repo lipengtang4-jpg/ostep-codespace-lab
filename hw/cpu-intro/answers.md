@@ -87,3 +87,26 @@ Instruction lists read without answer traces:
 - Hand timeline / 手算时间线: Seed 1 default/immediate: tick 1 P0 CPU; 2 P0 I/O; 3–5 P1 CPU; 6–7 idle; 8 P0 completion; 9 P0 second I/O; 10–14 idle; 15 P0 completion. Under switch-on-end, P1 runs at ticks 16–18. Seed 2 default/immediate finish at tick 16; switch-on-end at tick 23. Seed 3 default at tick 18; immediate at tick 17; switch-on-end at tick 24.
 - Verified result / 验证结果:
 - Analysis / 分析:
+
+
+## Verified results and analysis
+
+The simulator outputs are saved in q1.txt through q7.txt and q8-s1.txt through q8-s3.txt. Each predicted schedule was checked against the corresponding `-c -p` trace.
+
+- Q1: 10 ticks; CPU busy 10/10 (100%). Both CPU-bound jobs alternate at the one-instruction time slice.
+- Q2: 11 ticks; CPU busy 6/11 (54.55%). The I/O-bound job blocks after its instruction, allowing the CPU-bound job to run.
+- Q3: 7 ticks; CPU busy 6/7 (85.71%). The CPU-bound job starts first and runs through its CPU burst before the I/O-bound job.
+- Q4: 11 ticks; CPU busy 6/11 (54.55%). SWITCH_ON_END delays switching until the running job finishes, so the first job's I/O wait leaves the CPU idle.
+- Q5: 7 ticks; CPU busy 6/7 (85.71%). SWITCH_ON_IO switches when the first job blocks, so the other job uses the CPU during I/O.
+- Q6: 31 ticks; CPU busy 21/31 (67.74%), I/O busy 15/31 (48.39%). With IO_RUN_LATER, ready CPU-bound jobs run before the completed I/O job returns to the CPU.
+- Q7: 21 ticks; CPU busy 21/21 (100%), I/O busy 15/21 (71.43%). IO_RUN_IMMEDIATE resumes the just-completed I/O job, keeping the CPU busy and completing the workload earlier.
+
+For Q8, the verified completion ticks / CPU utilization are:
+
+| Seed | Default | IO_RUN_IMMEDIATE | SWITCH_ON_END |
+|---|---:|---:|---:|
+| 1 | 15 / 53.33% | 15 / 53.33% | 18 / 44.44% |
+| 2 | 16 / 62.50% | 16 / 62.50% | 23 / 43.48% |
+| 3 | 18 / 50.00% | 17 / 52.94% | 24 / 37.50% |
+
+These results match the predictions. Immediate switching helps when an I/O completion can resume a job promptly; switching only at job end causes avoidable idle time when the current job blocks. Q8 seed 3 shows the immediate policy saving one tick; for seeds 1 and 2, the completion timing is unchanged because the ready-job order does not improve. The `SWITCH_ON_END` policy is slower for all three seeds because a job that blocks cannot yield the CPU early.
